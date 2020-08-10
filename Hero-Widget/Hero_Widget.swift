@@ -10,41 +10,50 @@ import SwiftUI
 import Intents
 
 struct Provider: IntentTimelineProvider {
+    
+    @AppStorage("hero", store: UserDefaults(suiteName: "group.com.atilsamancioglu.WidgetHero"))
+    var heroData : Data = Data()
+    
     func placeholder(in context: Context) -> SimpleEntry {
-        SimpleEntry(date: Date(), configuration: ConfigurationIntent())
+        SimpleEntry(date: Date(), configuration: ConfigurationIntent(), hero: Superhero(image: "batman", name: "Batman", realName: "Bruce Wayne"))
     }
 
     func getSnapshot(for configuration: ConfigurationIntent, in context: Context, completion: @escaping (SimpleEntry) -> ()) {
-        let entry = SimpleEntry(date: Date(), configuration: configuration)
-        completion(entry)
+        
+        
+        if let hero = try? JSONDecoder().decode(Superhero.self, from: heroData) {
+            let entry = SimpleEntry(date: Date(), configuration: configuration, hero: hero)
+            completion(entry)
+        }
+        
+        
     }
 
     func getTimeline(for configuration: ConfigurationIntent, in context: Context, completion: @escaping (Timeline<Entry>) -> ()) {
-        var entries: [SimpleEntry] = []
+        
+        if let hero = try? JSONDecoder().decode(Superhero.self, from: heroData) {
+            let date = Date()
+            
+            let entry = SimpleEntry(date: date, configuration: configuration, hero: hero)
 
-        // Generate a timeline consisting of five entries an hour apart, starting from the current date.
-        let currentDate = Date()
-        for hourOffset in 0 ..< 5 {
-            let entryDate = Calendar.current.date(byAdding: .hour, value: hourOffset, to: currentDate)!
-            let entry = SimpleEntry(date: entryDate, configuration: configuration)
-            entries.append(entry)
+            let timeline = Timeline(entries: [entry], policy: .never)
+            completion(timeline)
         }
-
-        let timeline = Timeline(entries: entries, policy: .atEnd)
-        completion(timeline)
+        
     }
 }
 
 struct SimpleEntry: TimelineEntry {
     let date: Date
     let configuration: ConfigurationIntent
+    let hero : Superhero
 }
 
 struct Hero_WidgetEntryView : View {
     var entry: Provider.Entry
 
     var body: some View {
-        Text(entry.date, style: .time)
+        CircularImageView(image: Image(entry.hero.image))
     }
 }
 
@@ -53,17 +62,15 @@ struct Hero_Widget: Widget {
     let kind: String = "Hero_Widget"
 
     var body: some WidgetConfiguration {
+        
         IntentConfiguration(kind: kind, intent: ConfigurationIntent.self, provider: Provider()) { entry in
             Hero_WidgetEntryView(entry: entry)
         }
-        .configurationDisplayName("My Widget")
-        .description("This is an example widget.")
+        .configurationDisplayName("Hero Widget")
+        .description("Hero widget!!!!")
     }
 }
 
-struct Hero_Widget_Previews: PreviewProvider {
-    static var previews: some View {
-        Hero_WidgetEntryView(entry: SimpleEntry(date: Date(), configuration: ConfigurationIntent()))
-            .previewContext(WidgetPreviewContext(family: .systemSmall))
-    }
-}
+
+
+ 
